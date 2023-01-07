@@ -2,7 +2,7 @@ const AWS = require("aws-sdk");
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 
-exports.handler = async (event, context) => {
+exports.restaurants = async (event, context) => {
   // Insert restaurant
   if (event.httpMethod === "POST") {
     const restaurant = JSON.parse(event.body);
