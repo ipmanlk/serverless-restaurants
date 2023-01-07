@@ -1,0 +1,35 @@
+service: restaurant-service
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  timeout: 8
+  versionFunctions: false
+
+functions:
+  restaurants:
+    handler: handler.restaurants
+    events:
+      - http:
+          path: /restaurants
+          method: ANY
+
+resources:
+  Resources:
+    RestaurantsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Restaurants
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+package:
+  patterns:
+    - "!node_modules/**"
