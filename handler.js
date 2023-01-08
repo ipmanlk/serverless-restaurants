@@ -7,6 +7,7 @@ exports.restaurants = async (event, context) => {
   // Insert restaurant
   if (event.httpMethod === "POST") {
     const restaurant = JSON.parse(event.body);
+    restaurant.id = randomUUID();
     const params = {
       TableName: "Restaurants",
       Item: restaurant,
@@ -17,7 +18,8 @@ exports.restaurants = async (event, context) => {
         statusCode: 201,
         body: JSON.stringify(restaurant),
       };
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Could not save restaurant" }),
@@ -52,7 +54,8 @@ exports.restaurants = async (event, context) => {
           statusCode: 200,
           body: JSON.stringify(result.Items),
         };
-      } catch (error) {
+      } catch (e) {
+        console.error(e);
         return {
           statusCode: 500,
           body: JSON.stringify({ error: "Could not search restaurants" }),
@@ -70,7 +73,8 @@ exports.restaurants = async (event, context) => {
           statusCode: 200,
           body: JSON.stringify(result.Items),
         };
-      } catch (error) {
+      } catch (e) {
+        console.error(e);
         return {
           statusCode: 500,
           body: JSON.stringify({ error: "Could not retrieve restaurants" }),
@@ -84,6 +88,7 @@ exports.restaurantFood = async (event, context) => {
   // Create food
   if (event.httpMethod === "POST") {
     const food = JSON.parse(event.body);
+    food.id = randomUUID();
     const params = {
       TableName: "Food",
       Item: food,
@@ -94,7 +99,8 @@ exports.restaurantFood = async (event, context) => {
         statusCode: 201,
         body: JSON.stringify(food),
       };
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Could not save food" }),
@@ -117,7 +123,8 @@ exports.restaurantFood = async (event, context) => {
         statusCode: 200,
         body: JSON.stringify(result.Items),
       };
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Could not retrieve food" }),
@@ -132,8 +139,8 @@ exports.restaurantOrders = async (event, context) => {
     try {
       const restaurantId = event.pathParameters.restaurantId;
       const order = JSON.parse(event.body);
+      order.id = randomUUID();
       order.restaurantId = restaurantId;
-      order.orderId = randomUUID();
       const params = {
         TableName: "Orders",
         Item: order,
@@ -143,7 +150,8 @@ exports.restaurantOrders = async (event, context) => {
         statusCode: 201,
         body: JSON.stringify(order),
       };
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({
@@ -171,7 +179,8 @@ exports.restaurantOrders = async (event, context) => {
         statusCode: 200,
         body: JSON.stringify(result.Items),
       };
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({
@@ -187,7 +196,7 @@ exports.restaurantOrders = async (event, context) => {
       const params = {
         TableName: "Orders",
         Key: {
-          orderId: orderId,
+          id: orderId,
         },
       };
       const result = await dynamodb.get(params).promise();
@@ -202,7 +211,8 @@ exports.restaurantOrders = async (event, context) => {
           body: JSON.stringify({ error: "Order not found" }),
         };
       }
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Could not retrieve order" }),
@@ -219,7 +229,7 @@ exports.restaurantOrders = async (event, context) => {
       const params = {
         TableName: "Orders",
         Key: {
-          orderId: orderId,
+          id: orderId,
         },
       };
       const result = await dynamodb.get(params).promise();
@@ -234,7 +244,8 @@ exports.restaurantOrders = async (event, context) => {
           body: JSON.stringify({ error: "Order not found" }),
         };
       }
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: "Could not retrieve delivery progress" }),
@@ -280,7 +291,8 @@ exports.food = async () => {
     const result = await Promise.all(restaurantPromises);
 
     return result;
-  } catch (error) {
+  } catch (e) {
+    console.error(e);
     return {
       statusCode: 500,
       body: JSON.stringify({
