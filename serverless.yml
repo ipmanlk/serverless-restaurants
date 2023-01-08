@@ -34,18 +34,32 @@ functions:
           path: /restaurants/{restaurantId}/food
           method: ANY
 
-  restaurant-orders:
-    handler: handler.restaurantOrders
+  create-order:
+    handler: handler.createOrder
+    events:
+      - http:
+          path: /orders
+          method: POST
+
+  get-order:
+    handler: handler.getOrder
+    events:
+      - http:
+          path: /orders/{orderId}
+          method: GET
+
+  get-restaurant-orders:
+    handler: handler.getRestaurantOrders
     events:
       - http:
           path: /restaurants/{restaurantId}/orders
-          method: ANY
+          method: GET
 
-  food:
-    handler: handler.food
+  get-food-with-restaurants:
+    handler: handler.getFoodWithRestaurants
     events:
       - http:
-          path: /food
+          path: /food-with-restaurants
           method: GET
 
 resources:

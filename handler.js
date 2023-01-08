@@ -33,20 +33,21 @@ exports.restaurants = async (event, context) => {
       let filterExpression = "";
       let expressionAttributeValues = {};
       if (query.name) {
-        filterExpression += "contains(name, :name)";
+        filterExpression += "contains(#n, :name)";
         expressionAttributeValues[":name"] = query.name;
       }
       if (query.location) {
         if (filterExpression.length > 0) {
           filterExpression += " AND ";
         }
-        filterExpression += "contains(location, :location)";
+        filterExpression += "contains(#l, :location)";
         expressionAttributeValues[":location"] = query.location;
       }
       const params = {
         TableName: "Restaurants",
         FilterExpression: filterExpression,
         ExpressionAttributeValues: expressionAttributeValues,
+        ExpressionAttributeNames: { "#n": "name", "#l": "location" },
       };
       try {
         const result = await dynamodb.scan(params).promise();
@@ -87,8 +88,10 @@ exports.restaurants = async (event, context) => {
 exports.restaurantFood = async (event, context) => {
   // Create food
   if (event.httpMethod === "POST") {
+    const restaurantId = event.pathParameters.restaurantId;
     const food = JSON.parse(event.body);
     food.id = randomUUID();
+    food.restaurantId = restaurantId;
     const params = {
       TableName: "Food",
       Item: food,
@@ -133,134 +136,88 @@ exports.restaurantFood = async (event, context) => {
   }
 };
 
-exports.restaurantOrders = async (event, context) => {
-  // Create order for a restaurant
-  if (event.httpMethod === "POST" && event.path === "/orders/{restaurantId}") {
-    try {
-      const restaurantId = event.pathParameters.restaurantId;
-      const order = JSON.parse(event.body);
-      order.id = randomUUID();
-      order.restaurantId = restaurantId;
-      const params = {
-        TableName: "Orders",
-        Item: order,
-      };
-      await dynamodb.put(params).promise();
-      return {
-        statusCode: 201,
-        body: JSON.stringify(order),
-      };
-    } catch (e) {
-      console.error(e);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: "Could not create order for the specified restaurant",
-        }),
-      };
-    }
+exports.createOrder = async (event, context) => {
+  try {
+    const order = JSON.parse(event.body);
+    order.id = randomUUID();
+    const params = {
+      TableName: "Orders",
+      Item: order,
+    };
+    await dynamodb.put(params).promise();
+    return {
+      statusCode: 201,
+      body: JSON.stringify(order),
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Could not create order for the specified restaurant",
+      }),
+    };
   }
-  // Retrieve food orders per restaurant
-  else if (
-    event.httpMethod === "GET" &&
-    event.path === "/orders/{restaurantId}"
-  ) {
-    try {
-      const restaurantId = event.pathParameters.restaurantId;
-      const params = {
-        TableName: "Orders",
-        FilterExpression: "restaurantId = :restaurantId",
-        ExpressionAttributeValues: {
-          ":restaurantId": restaurantId,
-        },
-      };
-      const result = await dynamodb.scan(params).promise();
+};
+
+exports.getOrder = async (event, context) => {
+  try {
+    const orderId = event.pathParameters.orderId;
+    const params = {
+      TableName: "Orders",
+      Key: {
+        id: orderId,
+      },
+    };
+    const result = await dynamodb.get(params).promise();
+    if (result.Item) {
       return {
         statusCode: 200,
-        body: JSON.stringify(result.Items),
+        body: JSON.stringify(result.Item),
       };
-    } catch (e) {
-      console.error(e);
+    } else {
       return {
-        statusCode: 500,
-        body: JSON.stringify({
-          error: "Could not retrieve orders for the specified restaurant",
-        }),
+        statusCode: 404,
+        body: JSON.stringify({ error: "Order not found" }),
       };
     }
-  }
-  // Retrieve a single order by id
-  else if (event.httpMethod === "GET" && event.path === "/orders/{orderId}") {
-    try {
-      const orderId = event.pathParameters.orderId;
-      const params = {
-        TableName: "Orders",
-        Key: {
-          id: orderId,
-        },
-      };
-      const result = await dynamodb.get(params).promise();
-      if (result.Item) {
-        return {
-          statusCode: 200,
-          body: JSON.stringify(result.Item),
-        };
-      } else {
-        return {
-          statusCode: 404,
-          body: JSON.stringify({ error: "Order not found" }),
-        };
-      }
-    } catch (e) {
-      console.error(e);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Could not retrieve order" }),
-      };
-    }
-  }
-  // Check order delivery progress
-  else if (
-    event.httpMethod === "GET" &&
-    event.path === "/orders/{orderId}/progress"
-  ) {
-    try {
-      const orderId = event.pathParameters.orderId;
-      const params = {
-        TableName: "Orders",
-        Key: {
-          id: orderId,
-        },
-      };
-      const result = await dynamodb.get(params).promise();
-      if (result.Item) {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ progress: result.Item.deliveryProgress }),
-        };
-      } else {
-        return {
-          statusCode: 404,
-          body: JSON.stringify({ error: "Order not found" }),
-        };
-      }
-    } catch (e) {
-      console.error(e);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Could not retrieve delivery progress" }),
-      };
-    }
-  } else {
+  } catch (e) {
+    console.error(e);
     return {
-      statusCode: 404,
-      body: JSON.stringify({ error: "Route not found" }),
+      statusCode: 500,
+      body: JSON.stringify({ error: "Could not retrieve order" }),
+    };
+  }
+};
+
+exports.getRestaurantOrders = async (event, context) => {
+  try {
+    const restaurantId = event.pathParameters.restaurantId;
+    const params = {
+      TableName: "Orders",
+      FilterExpression: "restaurantId = :restaurantId",
+      ExpressionAttributeValues: {
+        ":restaurantId": restaurantId,
+      },
+    };
+    const result = await dynamodb.scan(params).promise();
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result.Items),
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Could not retrieve orders for the specified restaurant",
+      }),
     };
   }
 };
 
 // Get all food items in all restaurants along with the restaurant details
-exports.food = async () => {
+exports.getFoodWithRestaurants = async () => {
   try {
     const foodParams = {
       TableName: "Food",
@@ -289,7 +246,6 @@ exports.food = async () => {
 
     // Wait for all restaurant queries to complete
     const result = await Promise.all(restaurantPromises);
-
     return result;
   } catch (e) {
     console.error(e);
