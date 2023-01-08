@@ -27,6 +27,20 @@ functions:
           path: /restaurants
           method: ANY
 
+  food:
+    handler: restaurants.food
+    events:
+      - http:
+          path: /restaurants/{restaurantId}/food
+          method: ANY
+
+  orders:
+    handler: restaurants.orders
+    events:
+      - http:
+          path: /restaurants/{restaurantId}/orders
+          method: ANY
+
 resources:
   Resources:
     RestaurantsTable:
