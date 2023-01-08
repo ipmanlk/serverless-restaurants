@@ -80,7 +80,7 @@ exports.restaurants = async (event, context) => {
   }
 };
 
-exports.food = async (event, context) => {
+exports.restaurantFood = async (event, context) => {
   // Create food
   if (event.httpMethod === "POST") {
     const food = JSON.parse(event.body);
@@ -126,7 +126,7 @@ exports.food = async (event, context) => {
   }
 };
 
-exports.orders = async (event, context) => {
+exports.restaurantOrders = async (event, context) => {
   // Create order for a restaurant
   if (event.httpMethod === "POST" && event.path === "/orders/{restaurantId}") {
     try {
@@ -248,35 +248,44 @@ exports.orders = async (event, context) => {
   }
 };
 
-
-exports.getFoodWithRestaurant = async () => {
-  const foodParams = {
-    TableName: "Food",
-  };
-
-  // Get all food items
-  const foodResult = await dynamodb.scan(foodParams).promise();
-  const foodItems = foodResult.Items;
-
-  // Get the restaurant for each food item
-  const restaurantPromises = foodItems.map(async (foodItem) => {
-    const restaurantId = foodItem.restaurantId;
-    const restaurantParams = {
-      TableName: "Restaurants",
-      Key: {
-        id: restaurantId,
-      },
+// Get all food items in all restaurants along with the restaurant details
+exports.food = async () => {
+  try {
+    const foodParams = {
+      TableName: "Food",
     };
-    const restaurantResult = await dynamodb.get(restaurantParams).promise();
-    const restaurant = restaurantResult.Item;
+
+    // Get all food items
+    const foodResult = await dynamodb.scan(foodParams).promise();
+    const foodItems = foodResult.Items;
+
+    // Get the restaurant for each food item
+    const restaurantPromises = foodItems.map(async (foodItem) => {
+      const restaurantId = foodItem.restaurantId;
+      const restaurantParams = {
+        TableName: "Restaurants",
+        Key: {
+          id: restaurantId,
+        },
+      };
+      const restaurantResult = await dynamodb.get(restaurantParams).promise();
+      const restaurant = restaurantResult.Item;
+      return {
+        foodItem,
+        restaurant,
+      };
+    });
+
+    // Wait for all restaurant queries to complete
+    const result = await Promise.all(restaurantPromises);
+
+    return result;
+  } catch (error) {
     return {
-      foodItem,
-      restaurant,
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Could not retrieve food with restaurants",
+      }),
     };
-  });
-
-  // Wait for all restaurant queries to complete
-  const foodWithRestaurants = await Promise.all(restaurantPromises);
-
-  return foodWithRestaurants;
+  }
 };
