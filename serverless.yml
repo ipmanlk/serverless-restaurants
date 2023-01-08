@@ -28,18 +28,25 @@ functions:
           method: ANY
 
   food:
-    handler: restaurants.food
+    handler: handler.food
     events:
       - http:
           path: /restaurants/{restaurantId}/food
           method: ANY
 
   orders:
-    handler: restaurants.orders
+    handler: handler.orders
     events:
       - http:
           path: /restaurants/{restaurantId}/orders
           method: ANY
+
+  all-food:
+    handler: handler.getFoodWithRestaurant
+    events:
+      - http:
+          path: /food-with-restaurant
+          method: GET
 
 resources:
   Resources:

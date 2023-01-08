@@ -247,3 +247,36 @@ exports.orders = async (event, context) => {
     };
   }
 };
+
+
+exports.getFoodWithRestaurant = async () => {
+  const foodParams = {
+    TableName: "Food",
+  };
+
+  // Get all food items
+  const foodResult = await dynamodb.scan(foodParams).promise();
+  const foodItems = foodResult.Items;
+
+  // Get the restaurant for each food item
+  const restaurantPromises = foodItems.map(async (foodItem) => {
+    const restaurantId = foodItem.restaurantId;
+    const restaurantParams = {
+      TableName: "Restaurants",
+      Key: {
+        id: restaurantId,
+      },
+    };
+    const restaurantResult = await dynamodb.get(restaurantParams).promise();
+    const restaurant = restaurantResult.Item;
+    return {
+      foodItem,
+      restaurant,
+    };
+  });
+
+  // Wait for all restaurant queries to complete
+  const foodWithRestaurants = await Promise.all(restaurantPromises);
+
+  return foodWithRestaurants;
+};
